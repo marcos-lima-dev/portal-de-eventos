@@ -1,38 +1,37 @@
 import { NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 
-// 1. Banco de Dados em Memória (Simulação)
-// Usamos 'let' para permitir adicionar itens.
-// Em um app real, isso viria de um DB. Nota: Ao reiniciar o server, isso reseta.
-let events = [
-  {
-    id: 1,
-    nome: "Show de Jazz na Praça",
-    descricao: "Uma noite de jazz ao ar livre com bandas locais.",
-    local: "Praça Mauá",
-    data_evento: "2023-12-25T18:00:00",
-    categoria: "Música"
-  },
-  {
-    id: 2,
-    nome: "Exposição Arte Moderna",
-    descricao: "Obras de artistas cariocas contemporâneos.",
-    local: "MAM Rio",
-    data_evento: "2023-12-28T10:00:00",
-    categoria: "Exposição"
-  }
-];
+// Caminho absoluto para o arquivo JSON
+const dbPath = path.join(process.cwd(), 'src/app/api/events/db.json');
 
-// 2. Método GET: Retorna todos os eventos
-export async function GET() {
-  return NextResponse.json(events);
+// Função auxiliar para LER o arquivo
+function getEventsDB() {
+  const fileData = fs.readFileSync(dbPath, 'utf8');
+  return JSON.parse(fileData);
 }
 
-// 3. Método POST: Cria um novo evento
+// Função auxiliar para ESCREVER no arquivo
+function saveEventsDB(data: any[]) {
+  fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+}
+
+// GET: Lê do arquivo
+export async function GET() {
+  try {
+    const events = getEventsDB();
+    return NextResponse.json(events);
+  } catch (error) {
+    return NextResponse.json({ message: 'Erro ao ler dados' }, { status: 500 });
+  }
+}
+
+// POST: Lê, Adiciona e Grava no arquivo
 export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // Simples validação de campos obrigatórios
+    // Validação simples
     if (!body.nome || !body.local || !body.data_evento || !body.categoria) {
       return NextResponse.json(
         { message: 'Campos obrigatórios faltando' },
@@ -40,8 +39,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // 1. Pega os dados atuais
+    const events = getEventsDB();
+
+    // 2. Cria o novo evento
     const newEvent = {
-      id: events.length + 1, // Auto-incremento simples
+      id: events.length > 0 ? events[events.length - 1].id + 1 : 1, // Auto-incremento mais seguro
       nome: body.nome,
       descricao: body.descricao || "",
       local: body.local,
@@ -49,10 +52,13 @@ export async function POST(request: Request) {
       categoria: body.categoria,
     };
 
+    // 3. Adiciona ao array e SALVA no arquivo
     events.push(newEvent);
+    saveEventsDB(events);
 
     return NextResponse.json(newEvent, { status: 201 });
   } catch (error) {
+    console.error(error);
     return NextResponse.json(
       { message: 'Erro ao processar requisição' },
       { status: 500 }
