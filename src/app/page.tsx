@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { MapPinIcon } from "lucide-react";
-import { EventSearch } from "@/components/event-search"; // <--- Importamos aqui
+import { EventSearch } from "@/components/event-search";
+import { DeleteButton } from "@/components/delete-button"; // <--- 1. Import Novo
 
 async function getEventos(): Promise<Evento[]> {
+  // Ajuste para garantir que busque sempre dados frescos ao recarregar a página
   const res = await fetch("http://localhost:3000/api/events", {
     cache: "no-store",
   });
@@ -21,22 +23,18 @@ async function getEventos(): Promise<Evento[]> {
   return res.json();
 }
 
-// Next 15: searchParams é uma Promise
 type Props = {
   searchParams: Promise<{ q?: string }>;
 };
 
 export default async function Home({ searchParams }: Props) {
-  // 1. Resolvemos os parametros
   const params = await searchParams;
   const query = params.q?.toLowerCase() || "";
 
-  // 2. Buscamos TODOS os eventos
   const eventos = await getEventos();
 
-  // 3. Filtramos em memória (Case insensitive)
   const eventosFiltrados = eventos.filter((evento) => {
-    if (!query) return true; // Se não tem busca, mostra tudo
+    if (!query) return true;
     return (
       evento.nome.toLowerCase().includes(query) ||
       evento.categoria.toLowerCase().includes(query)
@@ -56,7 +54,6 @@ export default async function Home({ searchParams }: Props) {
         </div>
         
         <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
-          {/* Adicionamos a Busca aqui */}
           <EventSearch />
           
           <Button asChild>
@@ -93,11 +90,17 @@ export default async function Home({ searchParams }: Props) {
                   <span>{evento.local}</span>
                 </div>
               </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full" asChild>
+              
+              {/* 2. CardFooter Modificado */}
+              <CardFooter className="flex gap-2">
+                <Button variant="outline" className="flex-1" asChild>
                   <Link href={`/eventos/${evento.id}`}>Ver Detalhes</Link>
                 </Button>
+                
+                {/* Botão de Excluir */}
+                <DeleteButton id={evento.id} />
               </CardFooter>
+
             </Card>
           ))}
         </div>
